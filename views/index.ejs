@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html lang="<%= lang %>">
+<html lang="<%= title %>">
 <head>
     <meta charset="UTF-8">
-    <title><%= t.title %></title>
+    <title><%= title %></title>
 </head>
 <body>
-    <h1><%= t.welcome %></h1>
+    <h1><%= title %></h1>
+    <p><%= welcome %></p>
     <p>
-        <a href="?lang=ko">한국어</a> | 
-        <a href="?lang=en">English</a>
+        <a href="?lng=ko">한국어</a> | 
+        <a href="?lng=de">Deutsche</a> | 
+        <a href="?lng=fr">French</a> | 
+        <a href="?lng=en">English</a>
     </p>
-    <p><%= t.switchLanguage %></p>
+    <p><%= info %></p>
 </body>
 </html>

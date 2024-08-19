@@ -1,42 +1,66 @@
-// app.js
-const express = require('express');
-const app = express();
-const path = require('path');
+const express = require('express')
+const i18next = require('i18next')
+const i18nextMiddleware = require('i18next-http-middleware')
+const Backend = require('i18next-fs-backend')
 
-// EJS를 뷰 엔진으로 설정
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+const app = express()
+const port = process.env.PORT || 3000
 
-// 언어 설정을 위한 미들웨어
-app.use((req, res, next) => {
-  // 쿼리 파라미터나 쿠키에서 언어 설정을 가져옵니다
-  req.language = req.query.lang || req.cookies.lang || 'ko';
-  next();
-});
+const languageDetector = new i18nextMiddleware.LanguageDetector()
 
-// 번역을 위한 간단한 객체
-const translations = {
-  ko: {
-    title: '안녕하세요',
-    welcome: '환영합니다',
-    switchLanguage: '언어 변경'
-  },
-  en: {
-    title: 'Hello',
-    welcome: 'Welcome',
-    switchLanguage: 'Switch Language'
-  }
-};
+i18next
+  .use(Backend)
+  .use(languageDetector)
+  .use(i18nextMiddleware.LanguageDetector)
+  .init({
+    // debug: true,
+    // detection: {
+    //   order: ['customDetector']
+    // },
+    backend: {
+      loadPath: __dirname + '/locales/{{lng}}/{{ns}}.json',
+      addPath: __dirname + '/locales/{{lng}}/{{ns}}.missing.json'
+    },
+    fallbackLng: 'en',
+    load: 'languageOnly',
+    saveMissing: true
+  })
 
-// 루트 라우트
+app.use(i18nextMiddleware.handle(i18next))
+app.set('view engine', 'ejs')
+
 app.get('/', (req, res) => {
-  res.render('index', { 
-    lang: req.language, 
-    t: translations[req.language] 
-  });
-});
+  res.render('index', {
+    title: req.t('home.title'),
+    welcome: req.t('home.welcome'),
+    info: JSON.stringify({
+      'req.language': req.language,
+      'req.i18n.language': req.i18n.language,
+      'req.i18n.languages': req.i18n.languages,
+      'req.i18n.languages[0]': req.i18n.languages[0],
+      'req.t("home.title")': req.t('home.title')
+    }, null, 2)
+  })
+})
 
-// 서버 시작
-app.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
-});
+app.get('/missingtest', (req, res) => {
+  req.t('nonExisting', 'some default value')
+  res.send('check the locales files...')
+})
+
+app.use('/locales', express.static('locales'))
+
+// or instead of static
+// app.get('/locales/:lng/:ns', i18nextMiddleware.getResourcesHandler(i18next))
+// app.get('/locales/:lng/:ns', i18nextMiddleware.getResourcesHandler(i18next, { cache: false }))
+// loadPath for client: http://localhost:8080/locales/{{lng}}/{{ns}}
+
+// missing keys make sure the body is parsed (i.e. with [body-parser](https://github.com/expressjs/body-parser#bodyparserjsonoptions))
+app.post('/locales/add/:lng/:ns', i18nextMiddleware.missingKeyHandler(i18next))
+
+
+app.listen(port, () => {
+  console.log(`Server is listening on port ${port}`)
+})
+
+// curl localhost:8080 -H 'Accept-Language: de-de'
